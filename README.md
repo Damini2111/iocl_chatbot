@@ -34,3 +34,10 @@ iocl_chatbot/
 ├── *.csv, *.db, *.pkl # 📊 Supporting data files
 ├── README.md # 📘 Project info
 
+
+## 🚀 How to Run the Chatbot
+
+The main file to run the chatbot is: apps.py
+
+
+

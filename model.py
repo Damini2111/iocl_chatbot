@@ -3,6 +3,8 @@ import mysql.connector
 from dotenv import load_dotenv
 from rapidfuzz import fuzz, process
 import re
+import joblib
+
 
 # Load environment variables
 load_dotenv()
@@ -18,23 +20,57 @@ DB_CONFIG = {
 
 # === Intent Keywords ===
 INTENT_MAP = {
-    "faq": ["who", "how", "what", "when", "can", "cancel", "book", "print", "confirmation", "login"],
-    "holidays": ["holiday", "calendar", "festival", "date", "deepawali", "diwali", "christmas"],
-    "homes": ["holiday home", "home", "guest house", "location", "place", "stay", "udaipur", "goa", "manali"],
-    "procedure": ["steps", "procedure", "how to", "booking process", "instructions"]
+    "procedure": ["booking procedure", "how to book", "steps", "procedure", "instructions", "how do i book"],
+    "homes": ["holiday home", "guest house", "stay", "location", "udaipur", "goa", "manali"],
+    "holidays": ["holiday", "calendar", "festival", "date", "diwali", "christmas"],
+    "faq": ["who", "how", "what", "when", "can", "cancel", "book", "print", "confirmation", "login"]
 }
+
+
+# Load trained model
+intent_model = joblib.load("intent_model.pkl")
+
+def detect_intent(user_input):
+    return intent_model.predict([user_input])[0]
+
+
+
+
 
 # === Intent Detection ===
 def detect_intent(user_input):
     input_lower = user_input.lower()
     for intent, keywords in INTENT_MAP.items():
-        if any(word in input_lower for word in keywords):
-            return intent
+        for keyword in keywords:
+            if keyword in input_lower:
+                return intent
     return None
+
 
 # === Normalize User Input ===
 def preprocess(text):
     return re.sub(r"[^\w\s]", "", text.lower())
+
+def ask_bot(user_input_raw):
+    user_input = preprocess(user_input_raw)
+    intent = detect_intent(user_input)
+
+    if intent == "faq":
+        return match_faq(user_input)
+    elif intent == "holiday_calendar":
+        return get_holidays(user_input)
+    elif intent == "holiday_home":
+        return get_holiday_homes(user_input)
+    elif intent == "booking_procedure":
+        return get_booking_procedure()
+    else:
+        return "❌ I couldn’t understand your question. Please try again."
+
+
+
+
+
+
 
 # === Match FAQ with Fuzzy Logic ===
 def match_faq(user_input):
@@ -44,17 +80,22 @@ def match_faq(user_input):
         cursor.execute("SELECT question, answer FROM faqs")
         faqs = cursor.fetchall()
 
+        if not faqs:
+            return "No FAQs found."
+
         questions = [row[0] for row in faqs]
         match = process.extractOne(user_input, questions, scorer=fuzz.token_sort_ratio)
 
-        if match and match[1] >= 70:
+        if match and match[1] >= 60:  # Reduced threshold
             for q, a in faqs:
                 if q == match[0]:
-                    return a
+                    return f"❓ {q}\n👉 {a}"
         return "🤖 I couldn’t find an exact FAQ match. Try rephrasing."
     finally:
         cursor.close()
         conn.close()
+
+
 
 # === Holiday Calendar ===
 def get_holidays(user_input):
@@ -104,29 +145,6 @@ def get_holiday_homes(user_input):
     finally:
         cursor.close()
         conn.close()
-
-    try:
-        conn = mysql.connector.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-
-        keyword = preprocess(user_input)
-        cursor.execute("SELECT holiday_home_name, location FROM holiday_homes")
-        homes = cursor.fetchall()
-
-        filtered = [
-            f"🏡 {name} — {loc}" for name, loc in homes if keyword in preprocess(name) or keyword in preprocess(loc)
-        ]
-
-        if filtered:
-            return "\n".join(filtered)
-        elif homes:
-            return "\n".join(f"🏡 {name} — {loc}" for name, loc in homes)
-        else:
-            return "No holiday homes found."
-    finally:
-        cursor.close()
-        conn.close()
-
 # === Booking Procedure ===
 def get_booking_procedure():
     try:
@@ -142,21 +160,25 @@ def get_booking_procedure():
         cursor.close()
         conn.close()
 
-# === Master Handler ===
-def ask_bot(user_input):
-    user_input = preprocess(user_input)
-    intent = detect_intent(user_input)
+def list_all_faqs():
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("SELECT question, answer FROM faqs")
+        faqs = cursor.fetchall()
 
-    if intent == "faq":
-        return match_faq(user_input)
-    elif intent == "holidays":
-        return get_holidays(user_input)
-    elif intent == "homes":
-        return get_holiday_homes(user_input)
-    elif intent == "procedure":
-        return get_booking_procedure()
-    else:
-        return "❌ Sorry, I didn’t understand your question. Ask about bookings, holidays, holiday homes, or FAQs."
+        if not faqs:
+            return "No FAQs found in the database."
+
+        response = "📘 List of FAQs:\n\n"
+        for i, (q, a) in enumerate(faqs, start=1):
+            response += f"{i}. ❓ {q}\n   💬 {a}\n\n"
+        return response.strip()
+    finally:
+        cursor.close()
+        conn.close()
+
+
 
 # === CLI Loop ===
 if __name__ == "__main__":
@@ -169,7 +191,3 @@ if __name__ == "__main__":
             print("👋 Goodbye!")
             break
         print(ask_bot(user_input))
-
-
-
-

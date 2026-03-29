@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IOCL Employee Chatbot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --red: #c8102e;
+      --red-dark: #9e0c23;
+      --red-glow: rgba(200,16,46,0.18);
+      --gold: #f5a800;
+      --gold-light: #ffd166;
+      --bg: #0d0d0f;
+      --surface: #16161a;
+      --surface2: #1e1e24;
+      --border: rgba(255,255,255,0.07);
+      --text: #f0eee8;
+      --muted: #888890;
+      --bot-bubble: #1a1a22;
+      --user-bubble: #c8102e;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--red), var(--gold), transparent);
+    }
+
+    .logo-ring {
+
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--red), var(--gold));
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      color: white;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+      box-shadow: 0 0 16px var(--red-glow);
+    }
+
+    .header-info h1 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--text);
+    }
+
+    .header-info p {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      margin-top: 1px;
+    }
+
+    .status-dot {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #2ecc71;
+      box-shadow: 0 0 6px #2ecc71;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* QUICK ACTIONS */
+    .quick-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .quick-bar::-webkit-scrollbar { display: none; }
+
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .chip:hover {
+      border-color: var(--red);
+      color: var(--text);
+      background: var(--red-glow);
+    }
+
+    /* CHAT AREA */
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #chat::-webkit-scrollbar { width: 4px; }
+    #chat::-webkit-scrollbar-track { background: transparent; }
+    #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* WELCOME */
+    .welcome {
+      text-align: center;
+      padding: 32px 0 16px;
+      animation: fadeUp 0.5s ease;
+    }
+
+    .welcome-icon {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: white;
+      margin: 0 auto 16px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 0 32px var(--red-glow);
+      border: 3px solid var(--gold);
+    }
+
+    .welcome h2 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .welcome p {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 320px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* MESSAGES */
+    .msg {
+      display: flex;
+      gap: 10px;
+      animation: fadeUp 0.3s ease;
+      max-width: 82%;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+    .msg.bot { align-self: flex-start; }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .msg.bot .avatar {
+      background: linear-gradient(135deg, var(--red), var(--gold));
+      font-weight: 700;
+      font-family: 'Rajdhani', sans-serif;
+      color: white;
+    }
+
+    .msg.user .avatar {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .bubble {
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .msg.bot .bubble {
+      background: var(--bot-bubble);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+      color: var(--text);
+    }
+
+    .msg.user .bubble {
+      background: var(--user-bubble);
+      border-bottom-right-radius: 4px;
+      color: white;
+    }
+
+    /* TYPING */
+    .typing .bubble {
+      padding: 14px 18px;
+    }
+
+    .dots span {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      margin: 0 2px;
+      animation: bounce 1.2s infinite;
+    }
+
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* INPUT */
+    .input-area {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    #userInput {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      resize: none;
+      outline: none;
+      min-height: 48px;
+      max-height: 120px;
+      line-height: 1.5;
+      transition: border-color 0.2s;
+    }
+
+    #userInput::placeholder { color: var(--muted); }
+    #userInput:focus { border-color: var(--red); }
+
+    #sendBtn {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--red), var(--red-dark));
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+      box-shadow: 0 4px 16px var(--red-glow);
+    }
+
+    #sendBtn:hover { transform: scale(1.05); box-shadow: 0 6px 20px var(--red-glow); }
+    #sendBtn:active { transform: scale(0.97); }
+    #sendBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    #sendBtn svg { width: 20px; height: 20px; fill: white; }
+
+    .footer-note {
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 6px 0 2px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-info">
+    <h1>IOCL EMPLOYEE ASSIST</h1>
+    <p>Holiday Homes · Bookings · FAQs · Calendar</p>
+  </div>
+  <div class="status-dot">
+    <div class="dot"></div>
+    Online
+  </div>
+</header>
+
+<div class="quick-bar">
+  <div class="chip" onclick="sendQuick('How to book a holiday home?')">📋 How to Book</div>
+  <div class="chip" onclick="sendQuick('Show all FAQs')">❓ All FAQs</div>
+  <div class="chip" onclick="sendQuick('Show holiday calendar')">📅 Holiday Calendar</div>
+  <div class="chip" onclick="sendQuick('Show holiday homes')">🏡 Holiday Homes</div>
+  <div class="chip" onclick="sendQuick('How to cancel booking?')">❌ Cancel Booking</div>
+  <div class="chip" onclick="sendQuick('Who can book holiday home?')">👤 Eligibility</div>
+</div>
+
+<div id="chat">
+  <div class="welcome">
+    <div class="welcome-icon"><img src="/static/iocl.png" alt="IOCL" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/></div>
+    <h2>Welcome to IOCL Assist</h2>
+    <p>Ask me anything about holiday home bookings, leave calendar, or employee FAQs.</p>
+  </div>
+</div>
+
+<div class="input-area">
+  <textarea id="userInput" placeholder="Ask about bookings, holidays, FAQs..." rows="1"></textarea>
+  <button id="sendBtn" onclick="sendMessage()">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+    </svg>
+  </button>
+</div>
+<div class="footer-note">Indian Oil Corporation Limited · Internal Employee Portal</div>
+
+<script>
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("userInput");
+  const btn = document.getElementById("sendBtn");
+
+  // Auto-resize textarea
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  function addMessage(text, sender) {
+    const div = document.createElement("div");
+    div.className = `msg ${sender}`;
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = sender === "bot" ? "IO" : "👤";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;
+
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return div;
+  }
+
+  function addTyping() {
+    const div = document.createElement("div");
+    div.className = "msg bot typing";
+    div.id = "typing";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = "IO";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
+
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById("typing");
+    if (t) t.remove();
+  }
+
+  async function sendMessage() {
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    addMessage(msg, "user");
+    input.value = "";
+    input.style.height = "auto";
+    btn.disabled = true;
+    addTyping();
+
+    try {
+      const res = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      removeTyping();
+      addMessage(data.response, "bot");
+    } catch (err) {
+      removeTyping();
+      addMessage("⚠️ Connection error. Please try again.", "bot");
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+
+  function sendQuick(text) {
+    input.value = text;
+    sendMessage();
+  }
+</script>
+</body>
+</html>
+
